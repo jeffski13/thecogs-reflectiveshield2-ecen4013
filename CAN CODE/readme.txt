@@ -1,1 +1,1 @@
-This folder is Michael's. There are many like it, but this folder is mine.
+This folder contains all the .c and .h files for CAN Code

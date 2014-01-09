@@ -1,0 +1,109 @@
+#summary Audio Hardware and Code Research page. Researcher: Jason Semien & Michael Lenth
+<h1>Audio</h1>
+
+https://thecogs-reflectiveshield2-ecen4013.googlecode.com/hg/wiki/Research/Audio/Research_Audio_headerimg.jpg ACK:Robotshop Distribution Inc.
+
+<h2>Table of Contents</h2>
+
+<wiki:toc max_depth="5" />
+
+-----
+
+==Quick Links==
+
+<a href="https://www.sparkfun.com/datasheets/BreakoutBoards/BOB-09579-ISD1900.pdf">ISD1932 Datasheet</a>  <a href="http://ianlangelectronic.webeden.co.uk/#/voice-recorder/4562321245">ISD1932 Application Tutorial</a> 
+
+==Design Challenges==
+
+The following <a href="https://thecogs-reflectiveshield2-ecen4013.googlecode.com/hg/wiki/ReflectiveShield2.0_MarketingReqs.pdf"> marketing requirements</a> had a significant impact in the design of the audio:
+
+<ul>
+	<li>MRS 5a: The shield must alert the user with visual and audible indication when the shield has absorbed a valid magical attack.</li>
+	<li>MRS 5ai: A countdown timer should be implemented to indicate when the user should release the stored energy.</li>
+	<li>MRS 5b: A countdown timer should be implemented to indicate when the user should release the stored energy.</li>
+	<li>MRS 5c: The shield must alert other players when an attack or a healing packet has been reflected by the shield both visually and audibly.</li>	
+</ul>
+
+==ISD1932==
+The first option audio controller is the ISD1932 an active low chip. The ISD1932 is a record/playback chip that encompass audio playback, audio record, storage, audio selection, DAC, amplification, and PWM output. All of these operations are needed for achieving the audio feature of the Reflective Shield. The controller has two different operating modes which are address mode and direct mode. These modes are selected by pin 27 on the chip (Addr/Drct)
+
+===Address Mode===
+Address mode is selected by pin 27 on the ISD1932 chip when the pin is connect to Vcc. In address mode the chip uses 8 pins as address pins. Using binary logic to access different audio sounds by dividing the memory location into 16 slots. In these 8 bit address you are able to select which audio sound plays and the duration of that sound. 
+
+To record or input audio sounds in address mode the REC pin on the chip will be held low for 2 seconds the recording begins from the start address to the end address. This length of time can be displayed through the LED pin turning on a LED. The audio correspond to the start and end addresses. 
+
+For the reflective shield there will be a total of 6 sounds with an extras 7th sound for a possible cheat code that may be added later. To play one of these message the pin were the audio message is stored has to be set low. Also the R/P pin, which is the record or playback operation determines if the user wants to record or playback an audio message. The duration of each audio message is determined by the sampling frequency and resistor placed across the Rosc pin. In the configuration for the reflective shield the sample rate will be 6.4 kHz. This will be achieved by placing a 100kΩ resistor across the Rosc pin. This will cause the duration to be 5 seconds for each audio sound message. The time duration for the total audio messages combined is 40 secs. Utilizing all 8 audio message pins will allocate 5 second for each. This is identified by the table below. 
+
+https://thecogs-reflectiveshield2-ecen4013.googlecode.com/hg/wiki/Research/Audio/Research_Audio_samplingExtResistorTable.png ACK:Nuvoton Electronics Corporation.
+
+Direct mode will be the designated mode that will be used in creating the Reflective Shield. To select direct mode pin 27 on the ISD1932 must be grounded. In direct mode the chip uses the same 8 pins from address mode as 8 individual memory locations for audio sounds. To configure direct mode to the correct number or memory location the user wants to occupy with sound there are 3 pins that need to either be set high or low.
+
+===Power===
+The ISD1932 chip is powered normal at 3.3V but has a volatage operation range of 2.4V – 5.5V. All of the logic complete by the ISD chip either in address or direct mode is done at 3.3V being the high input or output voltage. This 3.3V logic is implemented for the 8 input pins desiganted for the 8 possible audio messages. Once the specific message has been selected the signal will be output through the Sp+ and Sp- pins.
+
+===Design Schematic===
+
+https://thecogs-reflectiveshield2-ecen4013.googlecode.com/hg/wiki/Research/Audio/Research_Audio_DesignSch.png
+
+If there is a need to free up more GPI/O pins on the microcontroller then there is the option of using a 3:8 demultiplexer. This would still accomplished the triggering of all eight audio messages on the ISD1932, while only taking up 3 I/O pin on the host microcontroller. The demultiplexer researched is from Texas Instruments the part number is SN74LVC138A-EP. This IC is powered between 2.7V to 3.6V.
+
+===Hardware Simulation===
+
+The simulation for the audio set up with regards to the <a href="https://code.google.com/p/thecogs-reflectiveshield2-ecen4013/wiki/uController">microcontroller</a> are shown in the image below. The function headers detailed above for the audio list seven different cases that will be chosen from when determining which sound will come out of the speaker. Due to the limited amount of space needed to display the design, only five outputs from the PIC are shown here, labeled as M1-M5 (corresponding with the ISD1932). The transistors are there to represent the setting of the microcontroller pins to high and low which turns the output off and on, respectively. The LED’s are for indicating when an output is enabled. In application, the LED’s would have been turned on always, but would turn off once a sound is to be played.
+
+https://thecogs-reflectiveshield2-ecen4013.googlecode.com/hg/wiki/Research/Audio/Research_Audio_HardwareSimSch.png
+
+==Speaker==
+The speaker used is the PUI Audio, Inc. AS07008P0-2-R (8 ohm).
+
+<ul>
+<li>Power rating: 2W</li>
+<li>Impedance: 8 ohm</li>
+<li>Sound level: 86 dB</li>
+<li>Dimensions: 70.00mm L x 30.50mm W 23.00mm H</li>
+<li>Cost: $4.83</li>
+</ul>
+
+https://thecogs-reflectiveshield2-ecen4013.googlecode.com/hg/wiki/Research/Audio/Research_Audio_PUISpeaker.jpg ACK: PUI Audio
+
+==Audio Code==
+
+Since direct mode will be used, the audio will be recorded into the ISD1932. In order to access the specific sounds, the <a href="https://code.google.com/p/thecogs-reflectiveshield2-ecen4013/wiki/uController">microcontroller</a> be driving the respective pins on the ISD1932, M1-M7, low. This will output the sound corresponding to the requested audio. This is reflected in the audio function headers and simulation as displayed below.
+
+===Function Headers===
+
+_void allHigh();_
+-	sets all of the I/O pins to zero (output) and driving them high (ISD1932 is active at low, we want them to start at no output).
+
+_void audioTransmit( char soundChoice );_
+-	takes a char value between 1 and 8. A switch statement will follow this function header and will set the I/O pins that the ISD1932 is connected to according to the desired sound. The general outline follows the setup below:
+
+<ul>
+	<li>Switch (sound)</li>
+		<ul><li>Switch is based off function input parameter.</li></ul>
+	<li>Case 0:</li>
+		<ul><li>Nothing is executed when all output pins are driven high, this is how the ISD is designed. Therefore we can still output this to the ISD and do not need to avoid it.</li></ul>
+	<li>Case 1:</li>
+		<ul><li>Drive Pin M1 Low. (Absorbed Magic Attack).</li></ul>
+	<li>Case 2:</li>
+		<ul><li>Drive Pin M2 Low. (Countdown Tones)</li></ul>
+	<li>Case 3:</li>
+		<ul><li>Drive Pin M3 Low. (Attack reflection)</li></ul>
+	<li>Case 4:</li>
+		<ul><li>Drive Pin M4 Low. (Healing Packet)</li></ul>
+	<li>Case 5:</li>
+		<ul><li>Drive Pin M5 Low. (Take Damage)</li></ul>
+	<li>Case 6:</li>
+		<ul><li>Drive Pin M6 Low. (Shield Breaks)</li></ul>
+	<li>Case 7:</li>
+		<ul><li>Drive Pin M7 Low. (Cheat code enabled)</li></ul>
+	<li>Default Case:</li>
+		<ul><li>Drive all pins high. (output no sound)</li></ul>
+</ul>
+
+==Sources==
+<a href="http://www.robotshop.com/sfe-voice-recorder-breakout-isd1932.html">Robotshop Distribution Inc.</a> (2013). Voice Recorder Breakout for ISD1932
+
+<a href="https://www.sparkfun.com/datasheets/BreakoutBoards/BOB-09579-ISD1900.pdf">Nuvoton Electronics Corporation. </a>(2009, January, 5). ISD1900 Single-Chip, Multiple-Message Voice Record/Playback Device {{{(Revision 0.51)}}}
+
+<a href="http://www.puiaudio.com/product-detail.aspx?categoryId=6&partnumber=AS07008PO-2-R">PUI Audio</a> (2013) AS07008PO-2-R
